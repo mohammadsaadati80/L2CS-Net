@@ -143,3 +143,60 @@ def getArch(arch,bins):
                 'The default value of ResNet50 will be used instead!')
         model = L2CS( torchvision.models.resnet.Bottleneck, [3, 4, 6,  3], bins)
     return model
+
+def remove_outliers(data, threshold=3):
+    list_sign = np.sum([1 if i > 0 else -1 for i in data])
+    if list_sign == 0: list_sign = np.sum(data)
+    filtered_data = list(filter(lambda i: i*list_sign > 0, data))
+
+    z_scores = np.abs((filtered_data - np.mean(filtered_data)) / np.std(filtered_data))
+    filtered_data_2 = np.array(filtered_data)[z_scores < threshold] 
+
+    return filtered_data_2
+
+def cal_std(data, mean):
+    result = 0
+    for x in data:
+      result += abs(x-mean)
+    return result
+
+def minimize_std_dev(data):
+    # min_std_dev = np.std(data)
+    min_std_dev = cal_std(data, np.mean(data))
+    best_number = np.mean(data)
+
+    for num in np.linspace(np.min(data), np.max(data), num=1000):
+        current_std_dev = cal_std(data, num)
+        if current_std_dev < min_std_dev:
+            min_std_dev = current_std_dev
+            best_number = num
+
+    return best_number
+
+def find_border_points(points, method="avg"):
+    filtered_data = []
+    threshold = 1.8
+    for i in range(len(points)):
+        filtered_data.append([remove_outliers([p[0] for p in points[i]], threshold),
+                              remove_outliers([p[1] for p in points[i]], threshold)])
+    print("\nfiltered_data=", filtered_data)
+
+    result = []
+
+    if method == "avg":
+        for i in range(len(points)):
+            result.append([minimize_std_dev(filtered_data[i][0]),
+                           minimize_std_dev(filtered_data[i][1])])
+    elif method == "max":
+        for i in range(len(points)):
+            if np.sum(filtered_data[i][0]) > 0:
+                best_x = max(filtered_data[i][0])
+            else:
+                best_x = min(filtered_data[i][0])
+            if np.sum(filtered_data[i][1]) > 0:
+                best_y = max(filtered_data[i][1])
+            else:
+                best_y = min(filtered_data[i][1])
+            result.append([best_x, best_y])
+
+    return result

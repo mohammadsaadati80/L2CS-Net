@@ -16,7 +16,7 @@ from PIL import Image, ImageOps
 
 from face_detection import RetinaFace
 
-from l2cs import select_device, draw_gaze, getArch, Pipeline, render
+from l2cs import select_device, draw_gaze, getArch, Pipeline, render, render2, find_border_points
 
 CWD = pathlib.Path.cwd()
 
@@ -39,6 +39,59 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
+def calibration(width, height):
+    start_time = time.time()
+    calibration_step_time = 6
+    instruction_time = 12
+    calibration_point_cnt = 4
+    points = [[], [], [], []]
+    messages = []
+    help_message_1 = "Please be ready for the calibration step. Calibration is done in "+str(calibration_point_cnt)+" steps and"
+    help_message_2 = "each step takes "+str(calibration_step_time)+" seconds. Please look at the red point in each step."
+    messages.append(help_message_1)
+    messages.append(help_message_2)
+    for i in range(calibration_point_cnt):
+        messages.append("Please look at the point No. " + str(i+1) + " for "+ str(calibration_step_time)+" seconds.")
+
+    while time.time() - start_time < (instruction_time+calibration_step_time*calibration_point_cnt):
+        success, frame = cap.read()
+        if not success:
+            print("Failed to obtain frame")
+            time.sleep(0.1)
+        frame = cv2.flip(frame, 1)
+        results = gaze_pipeline.step(frame)
+        frame, dx, dy = render2(frame, results, width, height)
+
+        if time.time() - start_time < instruction_time:
+            cv2.putText(frame, messages[0], (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(frame, messages[1], (10, 50),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+        elif time.time() - start_time < (instruction_time+1*calibration_step_time):
+            cv2.putText(frame, messages[1+1], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.circle(frame, (40,40), 25, (0, 0, 255), -1)
+            points[0].append([dx, dy])
+        elif time.time() - start_time < (instruction_time+2*calibration_step_time):
+            cv2.putText(frame, messages[1+2], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.circle(frame, (1240,40), 25, (0, 0, 255), -1)
+            points[1].append([dx, dy])
+        elif time.time() - start_time < (instruction_time+3*calibration_step_time):
+            cv2.putText(frame, messages[1+3], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.circle(frame, (1240,680), 25, (0, 0, 255), -1)
+            points[2].append([dx, dy])
+        elif time.time() - start_time < (instruction_time+4*calibration_step_time):
+            cv2.putText(frame, messages[1+4], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.circle(frame, (40,680), 25, (0, 0, 255), -1)
+            points[3].append([dx, dy])
+
+        cv2.imshow("Demo",frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        success,frame = cap.read()
+
+    print("\npoints=", points)
+
+    return find_border_points(points, method="avg")
+    # return find_border_points(points, method="max")
 
 if __name__ == '__main__':
     args = parse_args()
@@ -70,6 +123,8 @@ if __name__ == '__main__':
         raise IOError("Cannot open webcam")
 
     with torch.no_grad():
+        border_points = calibration(width, height)
+        print("\nborder_points=",border_points)
         while True:
 
             # Get frame
@@ -86,7 +141,7 @@ if __name__ == '__main__':
             results = gaze_pipeline.step(frame)
 
             # Visualize output
-            frame = render(frame, results, width, height)
+            frame = render(frame, results, width, height, border_points)
            
             myFPS = 1.0 / (time.time() - start_fps)
             cv2.putText(frame, 'FPS: {:.1f}'.format(myFPS), (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)
