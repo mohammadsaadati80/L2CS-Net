@@ -55,6 +55,15 @@ if __name__ == '__main__':
     )
      
     cap = cv2.VideoCapture(cam)
+    
+    width, height  = cap.get(3), cap.get(4)
+    print("width:", width, " height:", height)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+    width, height  = cap.get(3), cap.get(4)
+    print("width:", width, " height:", height)
 
     # Check if the webcam is opened correctly
     if not cap.isOpened():
@@ -71,11 +80,13 @@ if __name__ == '__main__':
                 print("Failed to obtain frame")
                 time.sleep(0.1)
 
+            frame = cv2.flip(frame, 1)
+
             # Process frame
             results = gaze_pipeline.step(frame)
 
             # Visualize output
-            frame = render(frame, results)
+            frame = render(frame, results, width, height)
            
             myFPS = 1.0 / (time.time() - start_fps)
             cv2.putText(frame, 'FPS: {:.1f}'.format(myFPS), (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)
