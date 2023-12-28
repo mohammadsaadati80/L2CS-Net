@@ -42,15 +42,15 @@ def parse_args():
 
 def calibration(width, height):
     start_time = time.time()
-    calibration_step_time = 6
+    calibration_step_time = 8
     instruction_time = 12
     calibration_point_cnt = 4
     calibration_point_size = 25
     safe_area = [int(calibration_point_size), int(width-calibration_point_size), int(height-calibration_point_size)]
-    places = [[0,0], [1,0], [1,2], [0,2]]
+    calibration_points_places = [[0,0], [1,0], [1,2], [0,2]]
     points = [[], [], [], []]
     messages = []
-    help_message_1 = "Please be ready for the calibration step. Calibration is done in "+str(calibration_point_cnt)+" steps and"
+    help_message_1 = "Please be ready for the calibration process. Calibration is done in "+str(calibration_point_cnt)+" steps and"
     help_message_2 = "each step takes "+str(calibration_step_time)+" seconds. Please look at the red point in each step."
     messages.append(help_message_1)
     messages.append(help_message_2)
@@ -64,7 +64,7 @@ def calibration(width, height):
             time.sleep(0.1)
         frame = cv2.flip(frame, 1)
         results = gaze_pipeline.step(frame)
-        frame, dx, dy = render(frame, results, width, height, [], True)
+        _, dx, dy = render(frame, results, width, height, [], True)
 
         if time.time() - start_time < instruction_time:
             cv2.putText(frame, messages[0], (100, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
@@ -72,7 +72,7 @@ def calibration(width, height):
         else:
             i = min(int(int(time.time() - start_time - instruction_time) / calibration_step_time), calibration_point_cnt-1)
             cv2.putText(frame, messages[2+i], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.circle(frame, (safe_area[places[i][0]],safe_area[places[i][1]]), calibration_point_size, (0, 0, 255), -1)
+            cv2.circle(frame, (safe_area[calibration_points_places[i][0]],safe_area[calibration_points_places[i][1]]), calibration_point_size, (0, 0, 255), -1)
             points[i].append([dx, dy])
 
         cv2.imshow("Demo",frame)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
             results = gaze_pipeline.step(frame)
 
             # Visualize output
-            frame = render(frame, results, width, height, border_points, False)
+            frame, _, _ = render(frame, results, width, height, border_points, False)
            
             myFPS = 1.0 / (time.time() - start_fps)
             cv2.putText(frame, 'FPS: {:.1f}'.format(myFPS), (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)

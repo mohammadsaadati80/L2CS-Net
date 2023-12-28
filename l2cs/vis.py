@@ -36,9 +36,10 @@ def draw_bbox(frame: np.ndarray, bbox: np.ndarray):
     return frame
 
 def render(frame: np.ndarray, results: GazeResultContainer, width, height, border_points, is_calibration=False):
-
+    dx, dy = None, None
+    
+    # Draw bounding boxes
     if not is_calibration:
-        # Draw bounding boxes
         for bbox in results.bboxes:
             frame = draw_bbox(frame, bbox)
 
@@ -65,11 +66,8 @@ def render(frame: np.ndarray, results: GazeResultContainer, width, height, borde
 
         image_out, dx, dy = draw_gaze(width, x_min,y_min,bbox_width, bbox_height,frame,(pitch,yaw),color=(0,0,255), is_calibration=is_calibration)
 
-        if is_calibration:
-            return image_out, dx, dy
-
-        # if not is_calibration:
-            # draw face & gaze
+        # draw face & gaze
+        if not is_calibration:
 
             # DISTANCE_TO_OBJECT = 1000  # mm
             # HEIGHT_OF_HUMAN_FACE = 250  # mm
@@ -106,38 +104,38 @@ def render(frame: np.ndarray, results: GazeResultContainer, width, height, borde
             # cv2.circle(frame, gaze_point, 15, (0, 0, 255), -1)
 
 
-    if not is_calibration:
-        # x1 , y1 = -35, 11
-        # x2 , y2 = 23, 14
-        # x3 , y3 = 18, 49
-        # x4 , y4 = -24, 47
-        x1 , y1 = border_points[0][0], border_points[0][1]
-        x2 , y2 = border_points[1][0], border_points[1][1]
-        x3 , y3 = border_points[2][0], border_points[2][1]
-        x4 , y4 = border_points[3][0], border_points[3][1]
-        gaze_point = [0 , 0]
-        if dx <= 0 and dy <= ((y4-y1)/2):
-            gaze_point[0] = (width/2) - (width/2)*(dx/(x1))
-            gaze_point[1] = 0 + (height/2)*((dy-y1)/((y4-y1)/2)) 
-        elif dx > 0 and dy <= ((y3-y2)/2):
-            gaze_point[0] = (width/2) + (width/2)*(dx/(x2))
-            gaze_point[1] = 0 + (height/2)*((dy-y2)/((y3-y2)/2))
-        elif dx > 0 and dy > ((y3-y2)/2):
-            gaze_point[0] = (width/2) + (width/2)*(dx/(x3))
-            gaze_point[1] = (height/2) + (height/2)*((dy-(y2+((y3-y2)/2)))/((y3-y2)/2))
-        elif dx <= 0 and dy > ((y4-y1)/2):
-            gaze_point[0] = (width/2) - (width/2)*(dx/(x4))
-            gaze_point[1] = (height/2) + (height/2)*((dy-(y1+((y4-y1)/2)))/((y4-y1)/2))
-        gaze_point = int(gaze_point[0]) , int(gaze_point[1])
-        # print(gaze_point)
-        if gaze_point[0] >= 0 and gaze_point[0] <= width and gaze_point[1] >= 0 and gaze_point[1] <= height:
-            cv2.circle(frame, gaze_point, 15, (0, 0, 255), -1)
+            # x1 , y1 = -35, 11
+            # x2 , y2 = 23, 14
+            # x3 , y3 = 18, 49
+            # x4 , y4 = -24, 47
+            x1 , y1 = border_points[0][0], border_points[0][1]
+            x2 , y2 = border_points[1][0], border_points[1][1]
+            x3 , y3 = border_points[2][0], border_points[2][1]
+            x4 , y4 = border_points[3][0], border_points[3][1]
+            gaze_point = [0 , 0]
+            if dx <= 0 and dy <= ((y4-y1)/2):
+                gaze_point[0] = (width/2) - (width/2)*(dx/(x1))
+                gaze_point[1] = 0 + (height/2)*((dy-y1)/((y4-y1)/2)) 
+            elif dx > 0 and dy <= ((y3-y2)/2):
+                gaze_point[0] = (width/2) + (width/2)*(dx/(x2))
+                gaze_point[1] = 0 + (height/2)*((dy-y2)/((y3-y2)/2))
+            elif dx > 0 and dy > ((y3-y2)/2):
+                gaze_point[0] = (width/2) + (width/2)*(dx/(x3))
+                gaze_point[1] = (height/2) + (height/2)*((dy-(y2+((y3-y2)/2)))/((y3-y2)/2))
+            elif dx <= 0 and dy > ((y4-y1)/2):
+                gaze_point[0] = (width/2) - (width/2)*(dx/(x4))
+                gaze_point[1] = (height/2) + (height/2)*((dy-(y1+((y4-y1)/2)))/((y4-y1)/2))
+            gaze_point = int(gaze_point[0]) , int(gaze_point[1])
+            # print(gaze_point)
+            if gaze_point[0] >= 0 and gaze_point[0] <= width and gaze_point[1] >= 0 and gaze_point[1] <= height:
+                cv2.circle(frame, gaze_point, 15, (0, 0, 255), -1)
         
-        # Draw landmarks
+    # Draw landmarks
+    if not is_calibration:
         for keypoint in results.landmarks:
             for point in keypoint:
                 color, thickness, radius = (0, 255, 0), 2, 2
                 x, y = int(point[0]), int(point[1])
                 cv2.circle(frame, (x, y), thickness, color, radius)
 
-    return frame
+    return frame, dx, dy
