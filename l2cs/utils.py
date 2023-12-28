@@ -175,6 +175,7 @@ def minimize_std_dev(data):
 
 def find_border_points(points, method="avg"):
     filtered_data = []
+    # threshold = 2
     threshold = 1.8
     for i in range(len(points)):
         filtered_data.append([remove_outliers([p[0] for p in points[i]], threshold),

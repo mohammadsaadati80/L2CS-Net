@@ -16,7 +16,7 @@ from PIL import Image, ImageOps
 
 from face_detection import RetinaFace
 
-from l2cs import select_device, draw_gaze, getArch, Pipeline, render, render2, find_border_points
+from l2cs import select_device, draw_gaze, getArch, Pipeline, render, find_border_points
 
 CWD = pathlib.Path.cwd()
 
@@ -45,6 +45,9 @@ def calibration(width, height):
     calibration_step_time = 6
     instruction_time = 12
     calibration_point_cnt = 4
+    calibration_point_size = 25
+    safe_area = [int(calibration_point_size), int(width-calibration_point_size), int(height-calibration_point_size)]
+    places = [[0,0], [1,0], [1,2], [0,2]]
     points = [[], [], [], []]
     messages = []
     help_message_1 = "Please be ready for the calibration step. Calibration is done in "+str(calibration_point_cnt)+" steps and"
@@ -61,27 +64,16 @@ def calibration(width, height):
             time.sleep(0.1)
         frame = cv2.flip(frame, 1)
         results = gaze_pipeline.step(frame)
-        frame, dx, dy = render2(frame, results, width, height)
+        frame, dx, dy = render(frame, results, width, height, [], True)
 
         if time.time() - start_time < instruction_time:
-            cv2.putText(frame, messages[0], (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.putText(frame, messages[1], (10, 50),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-        elif time.time() - start_time < (instruction_time+1*calibration_step_time):
-            cv2.putText(frame, messages[1+1], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.circle(frame, (40,40), 25, (0, 0, 255), -1)
-            points[0].append([dx, dy])
-        elif time.time() - start_time < (instruction_time+2*calibration_step_time):
-            cv2.putText(frame, messages[1+2], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.circle(frame, (1240,40), 25, (0, 0, 255), -1)
-            points[1].append([dx, dy])
-        elif time.time() - start_time < (instruction_time+3*calibration_step_time):
-            cv2.putText(frame, messages[1+3], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.circle(frame, (1240,680), 25, (0, 0, 255), -1)
-            points[2].append([dx, dy])
-        elif time.time() - start_time < (instruction_time+4*calibration_step_time):
-            cv2.putText(frame, messages[1+4], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
-            cv2.circle(frame, (40,680), 25, (0, 0, 255), -1)
-            points[3].append([dx, dy])
+            cv2.putText(frame, messages[0], (100, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(frame, messages[1], (100, 50),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+        else:
+            i = min(int(int(time.time() - start_time - instruction_time) / calibration_step_time), calibration_point_cnt-1)
+            cv2.putText(frame, messages[2+i], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            cv2.circle(frame, (safe_area[places[i][0]],safe_area[places[i][1]]), calibration_point_size, (0, 0, 255), -1)
+            points[i].append([dx, dy])
 
         cv2.imshow("Demo",frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -90,8 +82,9 @@ def calibration(width, height):
 
     print("\npoints=", points)
 
-    return find_border_points(points, method="avg")
-    # return find_border_points(points, method="max")
+    method="avg"
+    # method="max"
+    return find_border_points(points, method)
 
 if __name__ == '__main__':
     args = parse_args()
@@ -141,7 +134,7 @@ if __name__ == '__main__':
             results = gaze_pipeline.step(frame)
 
             # Visualize output
-            frame = render(frame, results, width, height, border_points)
+            frame = render(frame, results, width, height, border_points, False)
            
             myFPS = 1.0 / (time.time() - start_fps)
             cv2.putText(frame, 'FPS: {:.1f}'.format(myFPS), (10, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)
