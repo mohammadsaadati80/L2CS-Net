@@ -41,7 +41,6 @@ def parse_args():
     return args
 
 def calibration(width, height):
-    start_time = time.time()
     calibration_step_time = 8
     instruction_time = 12
     calibration_point_cnt = 4
@@ -49,14 +48,13 @@ def calibration(width, height):
     safe_area = [int(calibration_point_size), int(width-calibration_point_size), int(height-calibration_point_size)]
     calibration_points_places = [[0,0], [1,0], [1,2], [0,2]]
     points = [[], [], [], []]
-    messages = []
     help_message_1 = "Please be ready for the calibration process. Calibration is done in "+str(calibration_point_cnt)+" steps and"
     help_message_2 = "each step takes "+str(calibration_step_time)+" seconds. Please look at the red point in each step."
-    messages.append(help_message_1)
-    messages.append(help_message_2)
+    messages = [help_message_1, help_message_2]
     for i in range(calibration_point_cnt):
         messages.append("Please look at the point No. " + str(i+1) + " for "+ str(calibration_step_time)+" seconds.")
 
+    start_time = time.time()
     while time.time() - start_time < (instruction_time+calibration_step_time*calibration_point_cnt):
         success, frame = cap.read()
         if not success:
@@ -69,10 +67,14 @@ def calibration(width, height):
         if time.time() - start_time < instruction_time:
             cv2.putText(frame, messages[0], (100, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
             cv2.putText(frame, messages[1], (100, 50),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            for i in range(calibration_point_cnt):
+                cv2.circle(frame, (safe_area[calibration_points_places[i][0]],safe_area[calibration_points_places[i][1]]), calibration_point_size, (0, 255, 0), -1)
+                cv2.putText(frame, str(i+1), (safe_area[calibration_points_places[i][0]],safe_area[calibration_points_places[i][1]]),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
         else:
             i = min(int(int(time.time() - start_time - instruction_time) / calibration_step_time), calibration_point_cnt-1)
             cv2.putText(frame, messages[2+i], (300, 20),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (255, 0, 0), 1, cv2.LINE_AA)
             cv2.circle(frame, (safe_area[calibration_points_places[i][0]],safe_area[calibration_points_places[i][1]]), calibration_point_size, (0, 0, 255), -1)
+            # cv2.putText(frame, str(i+1), (safe_area[calibration_points_places[i][0]],safe_area[calibration_points_places[i][1]]),cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 255, 0), 1, cv2.LINE_AA)
             points[i].append([dx, dy])
 
         cv2.imshow("Demo",frame)
